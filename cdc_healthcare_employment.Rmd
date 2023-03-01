@@ -100,5 +100,8 @@ employment_wages <-
 ## Header
 
 ```{r test}
+employment_wages |> 
+  ggplot(aes(x = year, y = employment)) + 
+  geom_point()
 ```
 
