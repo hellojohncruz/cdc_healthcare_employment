@@ -1,0 +1,39 @@
+---
+title: "cdc_healthcare_employment"
+author: "John Cruz"
+date: "2023-02-28"
+output: pdf_document
+urlcolor: blue
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+[CDC National Center for Health Statistics](https://www.cdc.gov/nchs/hus/data-finder.htm)
+
+[HCEmpl](https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Publications/Health_US/hus20-21tables/hcempl.xlsx)
+
+
+each profession and see if employment has been increasing or decreasing and compare this with the change in mean salary. Also, I was thinking about creating a rating or score to see which profession has grown most throughout the last 20 years.
+
+## Required Libraries
+```{r library, message=FALSE, warning=FALSE}
+library(tidyverse)
+library(rio)
+```
+
+## Import Data
+
+```{r import-data, message=FALSE}
+url <- 'https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Publications/Health_US/hus20-21tables/hcempl.xlsx'
+data = rio::import(url)
+```
+
+
+
+```{r clean}
+knitr::kable(data)
+```
