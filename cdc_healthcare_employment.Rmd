@@ -88,9 +88,17 @@ knitr::kable(head(employment_wages))
 ## Clean Occupation Names and Figures
 
 ```{r clean-employment-wages}
-employment_wages 
-
+employment_wages <- 
+  employment_wages |> 
+  mutate(occupation_title = str_replace(occupation_title, "\\\\[:digit:]", "")) |>  # clean occupation titles
+  mutate(employment = str_replace(employment, "[^[:alnum:]]+", "")) |>               # clean employment
+  mutate(employment = as.integer(employment)) |> 
+  mutate(mean_hourly_wage = str_replace(mean_hourly_wage, "[^[:alnum:]\\.]+", "")) |>     # clean wages
+  mutate(mean_hourly_wage = as.numeric(mean_hourly_wage))
 ```
 
+## Header
 
+```{r test}
+```
 
