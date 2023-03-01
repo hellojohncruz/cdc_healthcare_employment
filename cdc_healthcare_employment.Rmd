@@ -56,6 +56,9 @@ updated_employment <-
 updated_employment$year <- 
   updated_employment$year |> 
   parse_number()
+
+knitr::kable(head(updated_employment))
+
 ```
 
 ## Subset Mean Hourly Wage Figures
@@ -64,9 +67,30 @@ updated_employment$year <-
 updated_wages <- 
   updated_data |> 
   select(c(1, 9:15)) |> 
-  gather('year', 'mean_hourly_wages', -c('occupation_title'))
+  gather('year', 'mean_hourly_wage', -c('occupation_title'))
 
 updated_wages$year <- 
   updated_wages$year |> 
   parse_number()
+
+knitr::kable(head(updated_wages))
 ```
+
+## Join Employment and Wage Figures
+
+```{r join-employment-wages}
+employment_wages <-
+  inner_join(updated_employment, updated_wages)
+
+knitr::kable(head(employment_wages))
+```
+
+## Clean Occupation Names and Figures
+
+```{r clean-employment-wages}
+employment_wages 
+
+```
+
+
+
