@@ -23,17 +23,50 @@ each profession and see if employment has been increasing or decreasing and comp
 ```{r library, message=FALSE, warning=FALSE}
 library(tidyverse)
 library(rio)
+library(janitor)
 ```
 
 ## Import Data
 
 ```{r import-data, message=FALSE}
 url <- 'https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Publications/Health_US/hus20-21tables/hcempl.xlsx'
-data = rio::import(url)
+data = import(url)    # use rio to read URL excel file
 ```
 
+## Drop Non-Data Rows
 
+```{r drop-rows-rename-columns, warning=FALSE}
 
-```{r clean}
-knitr::kable(data)
+updated_data <- 
+  data |> 
+  filter(!row_number() %in% c(1:3, 49:51)) |>     # drop non-data rows
+  row_to_names(row_number = 1) |>         # use janitor to take first row and make them column names
+  clean_names()               # clean column names
+  
+```
+
+## Subset Employment Figures
+
+```{r subset-employment}
+updated_employment <- 
+  updated_data |> 
+  select(c(1:8)) |> 
+  gather('year', 'employment', -c('occupation_title'))
+
+updated_employment$year <- 
+  updated_employment$year |> 
+  parse_number()
+```
+
+## Subset Mean Hourly Wage Figures
+
+```{r subset-wages}
+updated_wages <- 
+  updated_data |> 
+  select(c(1, 9:15)) |> 
+  gather('year', 'mean_hourly_wages', -c('occupation_title'))
+
+updated_wages$year <- 
+  updated_wages$year |> 
+  parse_number()
 ```
