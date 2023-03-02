@@ -1,5 +1,5 @@
 ---
-title: "cdc_healthcare_employment"
+title: "CDC Health Care Employment 2000-2020"
 author: "John Cruz"
 date: "2023-02-28"
 output: pdf_document
@@ -10,16 +10,17 @@ urlcolor: blue
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## R Markdown
+## Introduction
 
-[CDC National Center for Health Statistics](https://www.cdc.gov/nchs/hus/data-finder.htm)
+The Center for Disease Control and Prevention (CDC), through the National Center for Health Statistics ([NCHS](https://www.cdc.gov/nchs/hus/data-finder.htm)), released data about 
+health care employment and wages within the United States between 2000-2020. The selected occupations range between two categories of *health care practitioners and technical* roles such as physician assistants and pharmacy technicians and *health care support* roles such as nursing assistants and psychiatric aides. 
 
-[HCEmpl](https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Publications/Health_US/hus20-21tables/hcempl.xlsx)
+Employment figures are number of filled positions. This includes both full- and part-time wage and salary positions. Estimates do not include the self-employed, owners and partners in unincorporated firms, household workers, or unpaid family workers. This data excludes occupations such as dentists, physicians, and chiropractors, which have a large percentage of workers who are self-employed. Wages reported is calculated as a mean hourly wage rate for an occupation, where the total wages that all workers in the occupation earn in an hour divided by the total number of employees in the occupation.   
 
-
-each profession and see if employment has been increasing or decreasing and compare this with the change in mean salary. Also, I was thinking about creating a rating or score to see which profession has grown most throughout the last 20 years.
+**Data Source:** [Table HCEmpl](https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Publications/Health_US/hus20-21tables/hcempl.xlsx)
 
 ## Required Libraries
+
 ```{r library, message=FALSE, warning=FALSE}
 library(tidyverse)
 library(rio)
@@ -28,24 +29,33 @@ library(janitor)
 
 ## Import Data
 
+To import the data into R, the *rio* library allows it to read a URL that directly links to an Excel file and transform it into a data frame 
+
 ```{r import-data, message=FALSE}
 url <- 'https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Publications/Health_US/hus20-21tables/hcempl.xlsx'
-data = import(url)    # use rio to read URL excel file
+data = import(url)
+
+knitr::kable(head(data, 3))
 ```
 
 ## Drop Non-Data Rows
+
+Removing rows that does not provide figures from the table. Along with the *janitor* library, it can take a specific row and use it as the column headers, while also cleaning their names to a more appropriate syntax.  
 
 ```{r drop-rows-rename-columns, warning=FALSE}
 
 updated_data <- 
   data |> 
   filter(!row_number() %in% c(1:3, 49:51)) |>     # drop non-data rows
-  row_to_names(row_number = 1) |>         # use janitor to take first row and make them column names
-  clean_names()               # clean column names
-  
+  row_to_names(row_number = 1) |>         # first row as column names
+  clean_names()               # clean names
+
+knitr::kable(head(updated_data, 3))
 ```
 
 ## Subset Employment Figures
+
+These next two sections subsets the data into two data frames that focus on employment and wage figures. This allows the data to be easily pivoted separately from multiple year columns into one long-format standard.
 
 ```{r subset-employment}
 updated_employment <- 
@@ -57,7 +67,7 @@ updated_employment$year <-
   updated_employment$year |> 
   parse_number()
 
-knitr::kable(head(updated_employment))
+knitr::kable(head(updated_employment, 3))
 
 ```
 
@@ -73,19 +83,29 @@ updated_wages$year <-
   updated_wages$year |> 
   parse_number()
 
-knitr::kable(head(updated_wages))
+knitr::kable(head(updated_wages, 3))
 ```
 
 ## Join Employment and Wage Figures
 
-```{r join-employment-wages}
+Here, the data is joined back together, where year has its own unique column and we have the figures to compare a year and occupation easier. 
+
+```{r join-employment-wages, message=FALSE}
 employment_wages <-
   inner_join(updated_employment, updated_wages)
 
-knitr::kable(head(employment_wages))
+knitr::kable(head(employment_wages, 3))
 ```
 
-## Clean Occupation Names and Figures
+## Occupation Names and Figures
+
+Some of the occupation names have special characters and numbers as seen below. 
+
+```{r sample-employment-wages}
+knitr::kable(employment_wages[11:16, 1])
+```
+
+The *employment_wages* table is cleaned up removing unwanted characters and type casting integer and float values where appropriate
 
 ```{r clean-employment-wages}
 employment_wages <- 
@@ -95,13 +115,30 @@ employment_wages <-
   mutate(employment = as.integer(employment)) |> 
   mutate(mean_hourly_wage = str_replace(mean_hourly_wage, "[^[:alnum:]\\.]+", "")) |>     # clean wages
   mutate(mean_hourly_wage = as.numeric(mean_hourly_wage))
+
+knitr::kable(head(employment_wages, 3))
 ```
 
-## Header
+## Calculate Year-to-Year Changes between Occupations
+
+To calculate the percent change of employment and wage figures, the *lag()* function was used, grouping by *occupation_title*.  
 
 ```{r test}
-employment_wages |> 
-  ggplot(aes(x = year, y = employment)) + 
-  geom_point()
+employment_wages <- 
+  employment_wages |> 
+  group_by(occupation_title) |>
+  mutate(employment_delta = employment - lag(employment),
+         mean_hourly_wage_delta = mean_hourly_wage - lag(mean_hourly_wage), 
+         employment_pct_chg = round(((employment - lag(employment)) / lag(employment)), 3),
+         mean_hourly_wage_pct_chg = round(((mean_hourly_wage - lag(mean_hourly_wage)) / lag(mean_hourly_wage)), 4)) |> 
+  arrange(occupation_title)
+
+knitr::kable(head(employment_wages))
 ```
 
+``` {r graph}
+employment_wages |> 
+  ggplot(aes(x = occupation_title, y = employment_pct_chg)) +
+  geom_boxplot()
+
+```
