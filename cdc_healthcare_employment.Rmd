@@ -122,7 +122,8 @@ employment_wages <-
   mutate(employment = str_replace(employment, "[^[:alnum:]]+", "")) |>               # clean employment
   mutate(employment = as.integer(employment)) |> 
   mutate(mean_wage = str_replace(mean_wage, "[^[:alnum:]\\.]+", "")) |>     # clean wages
-  mutate(mean_wage = as.numeric(mean_wage))
+  mutate(mean_wage = as.numeric(mean_wage)) |> 
+  drop_na(employment)   # drop rows that does not have any employment data
 
 knitr::kable(head(employment_wages, 3))
 ```
@@ -137,7 +138,7 @@ employment_wages <-
   group_by(occupation) |>
   mutate(emp_delta = employment - lag(employment),
          wage_delta = mean_wage - lag(mean_wage), 
-         emp_pct_chg = round(((employment - lag(employment)) / lag(employment)), 3),
+         emp_pct_chg = round(((employment - lag(employment)) / lag(employment)), 4),
          wage_pct_chg = round(((mean_wage - lag(mean_wage)) / lag(mean_wage)), 4)) |> 
   arrange(occupation)
 
@@ -146,35 +147,26 @@ knitr::kable(head(employment_wages))
 
 ## Changes Between Employment and Mean Hourly Wage Overall
 
-Lets find the top 10 percentage change in wages based on occupation
+Filtering for the highest increase in percentage change in wages for each occupation regardless of year, we can see that *Nuclear medicine technologists* had the largest wage percentage change at 34.97%. Does these maximum increases within each occupation relate to how many more people are being employed from previous years?
 
-``` {r top-10}
-top_10 <- 
-  employment_wages |> 
-  arrange(desc(wage_pct_chg)) |> 
-  select(occupation, wage_pct_chg) |> 
-  head(10)
+``` {r top-wages-per-occ}
+top_occ <- 
+  employment_wages |>
+    filter(!is.na(emp_delta)) |> 
+    group_by(occupation) |> 
+    filter(wage_pct_chg == max(wage_pct_chg)) |> 
+    arrange(desc(wage_pct_chg))
 
-knitr::kable(top_10)
+knitr::kable(top_occ)
 ```
 
-## Top 10 Occupations 
+## Employee Rate Change vs. Wage Percentage Change
 
-With the top 10 occupations, lets look at each of their historical wage trends compared to employment percentage changes.
-
-```{r top_10-yearly}
-top_occ_names <- 
-  top_10$occupation
-
-top_10_history <- 
-  employment_wages |> 
-  filter(occupation %in% top_occ_names)
-```
+Plotting these changes, we can see that there is not a relationship where as employee rates increase, so does wages. 
 
 ``` {r graph}
-top_10_history |>
-  ggplot(aes(x = year, y = wage_pct_chg)) +
-  geom_line(aes(color = occupation)) +
-  geom_smooth(se = FALSE)
+top_occ |> 
+  ggplot(aes(x = emp_pct_chg, y = wage_pct_chg)) +
+  geom_point(stat = 'identity') 
 
 ```
