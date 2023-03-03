@@ -19,6 +19,10 @@ Employment figures are number of filled positions. This includes both full- and 
 
 **Data Source:** [Table HCEmpl](https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Publications/Health_US/hus20-21tables/hcempl.xlsx)
 
+After tidying up the Excel file into long format, the analysis will look to see if there is a relationship between the percentage change of employment versus the percentage change of mean hourly wages.   
+
+---
+
 ## Required Libraries
 
 ```{r library, message=FALSE, warning=FALSE}
@@ -26,6 +30,8 @@ library(tidyverse)
 library(rio)
 library(janitor)
 ```
+
+---
 
 ## Import Data
 
@@ -49,7 +55,7 @@ updated_data <-
   filter(!row_number() %in% c(1:3, 49:51)) |>     # drop non-data rows
   row_to_names(row_number = 1) |>         # first row as column names
   clean_names()               # clean names
-
+  
 knitr::kable(head(updated_data, 3))
 ```
 
@@ -61,7 +67,8 @@ These next two sections subsets the data into two data frames that focus on empl
 updated_employment <- 
   updated_data |> 
   select(c(1:8)) |> 
-  gather('year', 'employment', -c('occupation_title'))
+  gather('year', 'employment', -c('occupation_title')) |> 
+  rename(occupation = occupation_title)
 
 updated_employment$year <- 
   updated_employment$year |> 
@@ -77,7 +84,8 @@ knitr::kable(head(updated_employment, 3))
 updated_wages <- 
   updated_data |> 
   select(c(1, 9:15)) |> 
-  gather('year', 'mean_hourly_wage', -c('occupation_title'))
+  gather('year', 'mean_hourly_wage', -c('occupation_title')) |> 
+  rename(occupation = occupation_title, mean_wage = mean_hourly_wage)
 
 updated_wages$year <- 
   updated_wages$year |> 
@@ -110,11 +118,11 @@ The *employment_wages* table is cleaned up removing unwanted characters and type
 ```{r clean-employment-wages}
 employment_wages <- 
   employment_wages |> 
-  mutate(occupation_title = str_replace(occupation_title, "\\\\[:digit:]", "")) |>  # clean occupation titles
+  mutate(occupation = str_replace(occupation, "\\\\[:digit:]", "")) |>  # clean occupation titles
   mutate(employment = str_replace(employment, "[^[:alnum:]]+", "")) |>               # clean employment
   mutate(employment = as.integer(employment)) |> 
-  mutate(mean_hourly_wage = str_replace(mean_hourly_wage, "[^[:alnum:]\\.]+", "")) |>     # clean wages
-  mutate(mean_hourly_wage = as.numeric(mean_hourly_wage))
+  mutate(mean_wage = str_replace(mean_wage, "[^[:alnum:]\\.]+", "")) |>     # clean wages
+  mutate(mean_wage = as.numeric(mean_wage))
 
 knitr::kable(head(employment_wages, 3))
 ```
@@ -123,22 +131,50 @@ knitr::kable(head(employment_wages, 3))
 
 To calculate the percent change of employment and wage figures, the *lag()* function was used, grouping by *occupation_title*.  
 
-```{r test}
+```{r year-over-year}
 employment_wages <- 
   employment_wages |> 
-  group_by(occupation_title) |>
-  mutate(employment_delta = employment - lag(employment),
-         mean_hourly_wage_delta = mean_hourly_wage - lag(mean_hourly_wage), 
-         employment_pct_chg = round(((employment - lag(employment)) / lag(employment)), 3),
-         mean_hourly_wage_pct_chg = round(((mean_hourly_wage - lag(mean_hourly_wage)) / lag(mean_hourly_wage)), 4)) |> 
-  arrange(occupation_title)
+  group_by(occupation) |>
+  mutate(emp_delta = employment - lag(employment),
+         wage_delta = mean_wage - lag(mean_wage), 
+         emp_pct_chg = round(((employment - lag(employment)) / lag(employment)), 3),
+         wage_pct_chg = round(((mean_wage - lag(mean_wage)) / lag(mean_wage)), 4)) |> 
+  arrange(occupation)
 
 knitr::kable(head(employment_wages))
 ```
 
+## Changes Between Employment and Mean Hourly Wage Overall
+
+Lets find the top 10 percentage change in wages based on occupation
+
+``` {r top-10}
+top_10 <- 
+  employment_wages |> 
+  arrange(desc(wage_pct_chg)) |> 
+  select(occupation, wage_pct_chg) |> 
+  head(10)
+
+knitr::kable(top_10)
+```
+
+## Top 10 Occupations 
+
+With the top 10 occupations, lets look at each of their historical wage trends compared to employment percentage changes.
+
+```{r top_10-yearly}
+top_occ_names <- 
+  top_10$occupation
+
+top_10_history <- 
+  employment_wages |> 
+  filter(occupation %in% top_occ_names)
+```
+
 ``` {r graph}
-employment_wages |> 
-  ggplot(aes(x = occupation_title, y = employment_pct_chg)) +
-  geom_boxplot()
+top_10_history |>
+  ggplot(aes(x = year, y = wage_pct_chg)) +
+  geom_line(aes(color = occupation)) +
+  geom_smooth(se = FALSE)
 
 ```
