@@ -155,7 +155,8 @@ top_occ <-
     filter(!is.na(emp_delta)) |> 
     group_by(occupation) |> 
     filter(wage_pct_chg == max(wage_pct_chg)) |> 
-    arrange(desc(wage_pct_chg))
+    arrange(desc(wage_pct_chg)) |> 
+    select(occupation, emp_pct_chg, wage_pct_chg)
 
 knitr::kable(top_occ)
 ```
