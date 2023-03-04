@@ -22,7 +22,7 @@ Employment figures are number of filled positions. This includes both full- and 
 
 **Data Source:** [Table HCEmpl](https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Publications/Health_US/hus20-21tables/hcempl.xlsx)
 
-After tidying up the Excel file into long format, the analysis will look to see if there is a relationship between the percentage change of employment versus the percentage change of mean hourly wages.   
+After tidying up the Excel file into long format, the analysis will look to see if there is a relationship between the percentage change in employment versus the percentage change in mean hourly wages.   
 
 ---
 
